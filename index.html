@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#153C64">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Namaz Tracker</title>
+<style>
+:root{--bg:#f2f4f7;--card:#fff;--ink:#101828;--mute:#667085;--line:#e4e7ec;--brand:#153C64;--brand2:#215C98;
+--p:#067647;--pbg:#d1fadf;--q:#b42318;--qbg:#fee4e2;--a:#175cd3;--abg:#d1e9ff;--w:#b54708;--wbg:#fef0c7;--u:#6941c6;--ubg:#ebe9fe;--sch:#12B76A}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1220;--card:#141d30;--ink:#e6e9ef;--mute:#98a2b3;--line:#26324b;--brand:#0f2a47;--brand2:#7cb3e8;
+--p:#6ce9a6;--pbg:#063d24;--q:#fda29b;--qbg:#4a1510;--a:#84caff;--abg:#102a56;--w:#fec84b;--wbg:#3d2a05;--u:#bdb4fe;--ubg:#2b2058}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
+header h1{font-size:18px;margin:0;flex:1}
+header small{opacity:.8}
+main{padding:12px 16px calc(84px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:var(--mute);padding:8px 0 10px;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button i{font-style:normal;font-size:20px;line-height:24px}
+nav button.on{color:var(--brand2);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 12px}
+.card h2{font-size:14px;margin:0 0 8px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+button{font:inherit;cursor:pointer}
+.datebar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.datebar .dt{flex:1;text-align:center}.datebar .dt b{display:block;font-size:17px}.datebar .dt small{color:var(--mute)}
+.ic{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:22px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px}
+.chip.on{background:var(--brand2);border-color:var(--brand2);color:var(--card)}
+.prow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.prow:last-of-type{border-bottom:0}
+.pn{width:70px;font-weight:600}
+.seg{flex:1;display:flex;gap:6px}
+.seg button{flex:1;min-height:42px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--mute);font-weight:600}
+.seg button.on.P{background:var(--pbg);color:var(--p);border-color:var(--p)}
+.seg button.on.Q{background:var(--qbg);color:var(--q);border-color:var(--q)}
+.seg button.on.A{background:var(--abg);color:var(--a);border-color:var(--a)}
+.dayc{margin-top:8px;text-align:center;color:var(--mute);font-size:13px}.dayc.ok{color:var(--p);font-weight:700}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.stat small{color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.stat b{display:block;font-size:24px;line-height:1.2}
+.stat span{color:var(--mute);font-size:12px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wd{border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:6px 0;text-align:center}
+.wd.sel{border-color:var(--brand2);box-shadow:0 0 0 2px var(--brand2) inset}
+.wd.tod b{color:var(--brand2)}
+.wd small{display:block;color:var(--mute);font-size:10px}.wd b{font-size:14px}
+.dots{display:flex;justify-content:center;gap:2px;margin-top:4px}.dots i{width:5px;height:5px;border-radius:50%;background:var(--line)}
+.dots i.P{background:var(--p)}.dots i.Q{background:var(--q)}.dots i.A{background:var(--a)}
+.item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .tx{flex:1;min-width:0}.item .tx b{display:block;font-weight:600}.item .tx small{color:var(--mute)}
+.btn{border:0;border-radius:10px;padding:9px 12px;font-weight:700;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn.ada{background:var(--a);color:var(--card);border-color:var(--a)}
+.btn.pri{background:var(--brand2);color:var(--card);border-color:var(--brand2)}
+.btn.dan{color:var(--q)}
+.btn.full{width:100%;margin-top:8px}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;margin-right:4px}
+.t-q{background:var(--qbg);color:var(--q)}.t-u{background:var(--ubg);color:var(--u)}
+.s-Overdue{color:var(--q);font-weight:700}.s-Today{color:var(--w);font-weight:700}.s-Planned{color:var(--a)}.s-Not{color:var(--mute)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:8px 0 2px}.bar i{display:block;height:100%;background:var(--u)}
+.sec{font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--mute)}
+.sec.Overdue{color:var(--q)}.sec.Today{color:var(--w)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}th{color:var(--mute);font-size:12px}
+.wk{display:flex;align-items:flex-end;gap:6px;height:110px;margin-top:6px}
+.wk div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:10px;color:var(--mute)}
+.wk div i{width:100%;background:var(--brand2);border-radius:4px 4px 0 0;min-height:2px}
+label.f{display:block;font-size:13px;color:var(--mute);margin:8px 0 4px}
+input,select{font:inherit;width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.empty{color:var(--mute);text-align:center;padding:16px 0}
+dialog{border:0;border-radius:16px;padding:16px;width:min(92vw,420px);background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h3{margin:0 0 4px}
+.dlgb{display:flex;gap:8px;margin-top:14px}.dlgb .btn{flex:1}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:9;background:#101828;color:#fff;border-radius:12px;padding:10px 14px;display:none;align-items:center;gap:10px;max-width:600px;margin:0 auto}
+#toast.show{display:flex}#toast span{flex:1}#toast button{background:none;border:0;color:#84caff;font-weight:700}
+.note{font-size:12px;color:var(--mute)}
+</style>
+</head>
+<body>
+<header><h1>Namaz Tracker</h1><small id="hd"></small></header>
+<main id="app"></main>
+<nav id="nav">
+ <button data-act="tab" data-t="home"><i>🕌</i>Aaj</button>
+ <button data-act="tab" data-t="qaza"><i>⏳</i>Qaza</button>
+ <button data-act="tab" data-t="umari"><i>📿</i>Umari</button>
+ <button data-act="tab" data-t="sched"><i>🗓️</i>Schedule</button>
+ <button data-act="tab" data-t="more"><i>⋯</i>More</button>
+</nav>
+<div id="toast"><span></span><button id="undo">Undo</button></div>
+<dialog id="dlg"></dialog>
+<input type="file" id="fx" accept=".xlsx,.xlsm" hidden>
+<input type="file" id="fj" accept=".json,application/json" hidden>
+<script>
+const P5=['Fajar','Zohar','Asar','Maghrib','Isha'],P6=[...P5,'Witr'];
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const SC={'Padhi':'P','Qaza':'Q','Qaza Ada':'A'};
+const KEY='namaz.v1';
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const pd=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const addD=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
+const today=()=>ymd(new Date());
+const fmt=s=>{const d=pd(s);return pad(d.getDate())+'-'+MON[d.getMonth()]+'-'+d.getFullYear()};
+const fmtS=s=>{const d=pd(s);return DOW[d.getDay()]+', '+d.getDate()+' '+MON[d.getMonth()]+' '+d.getFullYear()};
+const days=(a,b)=>Math.round((pd(b)-pd(a))/864e5);
+const lab=(t,k)=>{const[d,i]=k.split('|');return fmt(d)+' '+(t==='u'?P6:P5)[+i]};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=(a,b)=>b?(100*a/b).toFixed(1)+'%':'0%';
+const n0=n=>n.toLocaleString('en-IN');
+
+function blank(){return{v:1,start:'2026-08-20',tracker:{},umari:{from:'2014-01-01',through:'2026-08-19',ada:{}},plans:[]}}
+let S=null;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||S.v!==1)S=blank();
+const UI={tab:'home',sel:today(),umLimit:60,umFrom:'',qf:'all',uf:'all'};
+let undoSnap=null,toastT=0;
+
+function save(){S.updated=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Could not save on this phone')}}
+function snap(){undoSnap=JSON.stringify(S)}
+function toast(msg,undo){const t=document.getElementById('toast');t.querySelector('span').textContent=msg;document.getElementById('undo').style.display=undo?'':'none';t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),4500)}
+document.getElementById('undo').onclick=()=>{if(undoSnap){S=JSON.parse(undoSnap);undoSnap=null;save();render()}document.getElementById('toast').classList.remove('show')};
+
+const getDay=d=>S.tracker[d]||['','','','',''];
+function setStatus(d,i,v){const r=getDay(d).slice();r[i]=r[i]===v?'':v;if(r.every(x=>!x))delete S.tracker[d];else S.tracker[d]=r;cleanPlans();save()}
+function isPending(t,k){const[d,i]=k.split('|');return t==='q'?(S.tracker[d]||[])[+i]==='Qaza':(d>=S.umari.from&&d<=S.umari.through&&!S.umari.ada[k])}
+function cleanPlans(){S.plans=S.plans.filter(p=>isPending(p.t,p.k))}
+const planOf=(t,k)=>S.plans.find(p=>p.t===t&&p.k===k);
+function pStatus(p){const t=today();return p.d<t?'Overdue':p.d===t?'Today':'Planned'}
+function markAda(t,k){snap();const[d,i]=k.split('|');if(t==='q'){const r=getDay(d).slice();r[+i]='Qaza Ada';S.tracker[d]=r}else S.umari.ada[k]=1;cleanPlans();save();toast('Ada ✓  '+lab(t,k),true);render()}
+
+function weekStart(s){const d=pd(s);return addD(s,-((d.getDay()+6)%7))}
+function count(a,b){let P=0,A=0,Q=0;for(const[d,r]of Object.entries(S.tracker)){if(d<a||d>b)continue;for(const v of r){if(v==='Padhi')P++;else if(v==='Qaza Ada')A++;else if(v==='Qaza')Q++}}return{P,A,Q}}
+function qazaList(){const out=[];for(const d of Object.keys(S.tracker).sort().reverse()){const r=S.tracker[d];for(let i=4;i>=0;i--)if(r[i]==='Qaza')out.push(d+'|'+i)}return out}
+const umTotal=()=>Math.max(0,(days(S.umari.from,S.umari.through)+1)*6);
+const umAda=()=>Object.keys(S.umari.ada).length;
+
+/* ---------- views ---------- */
+function vHome(){
+ const d=UI.sel,t=today(),r=getDay(d),filled=r.filter(Boolean).length,ws=weekStart(d);
+ let h=`<div class="datebar"><button class="ic" data-act="day" data-n="-1" aria-label="Previous day">‹</button><div class="dt"><b>${fmtS(d)}</b><small>${d===t?'Aaj (today)':days(d,t)>0?days(d,t)+' days ago':'Future date'}</small></div><button class="ic" data-act="day" data-n="1" aria-label="Next day">›</button></div>`;
+ if(d!==t)h+=`<div class="row"><button class="chip" data-act="today">← Back to Aaj</button></div>`;
+ if(d<S.start)h+=`<div class="card note">This date is before tracking starts (${fmt(S.start)}).</div>`;
+ h+='<div class="card">'+P5.map((p,i)=>`<div class="prow"><span class="pn">${p}</span><div class="seg">${['Padhi','Qaza','Qaza Ada'].map(v=>`<button class="${r[i]===v?'on '+SC[v]:''}" data-act="set" data-i="${i}" data-v="${v}">${v==='Qaza Ada'?'Ada':v}</button>`).join('')}</div></div>`).join('')
+  +`<div class="dayc ${filled===5?'ok':''}">${filled===5?'Day complete ✓':filled+' / 5 entered'}</div></div>`;
+ h+='<div class="card"><div class="week">';for(let k=0;k<7;k++){const x=addD(ws,k),rr=getDay(x);h+=`<button class="wd ${x===d?'sel':''} ${x===t?'tod':''}" data-act="pick" data-d="${x}"><small>${DOW[pd(x).getDay()]}</small><b>${pd(x).getDate()}</b><div class="dots">${rr.map(v=>`<i class="${SC[v]||''}"></i>`).join('')}</div></button>`}h+='</div></div>';
+ const wk=weekStart(t),cw=count(wk,addD(wk,6)),m0=t.slice(0,8)+'01',md=new Date(pd(t).getFullYear(),pd(t).getMonth()+1,0).getDate(),cm=count(m0,t.slice(0,8)+pad(md)),all=count('0000','9999'),ub=umTotal()-umAda();
+ h+=`<div class="stats"><div class="stat"><small>This week</small><b>${pct(cw.P+cw.A,35)}</b><span>${cw.P+cw.A} / 35 completed</span></div><div class="stat"><small>This month</small><b>${pct(cm.P+cm.A,md*5)}</b><span>${cm.P+cm.A} / ${md*5} completed</span></div><div class="stat"><small>Current Qaza</small><b style="color:var(--q)">${all.Q}</b><span>${all.A} Qaza Ada done</span></div><div class="stat"><small>Umari baki</small><b style="color:var(--u)">${n0(ub)}</b><span>${n0(umAda())} / ${n0(umTotal())} done</span></div></div>`;
+ const due=S.plans.filter(p=>p.d<=t).sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
+ h+=`<div class="card"><h2>Aaj ka plan (${due.length})</h2>${due.length?due.map(itemPlan).join(''):'<div class="empty">Nothing planned for today.</div>'}</div>`;
+ return h}
+function itemPlan(p){const s=pStatus(p);return `<div class="item"><div class="tx"><b><span class="tag t-${p.t}">${p.t==='q'?'Qaza':'Umari'}</span>${lab(p.t,p.k)}</b><small><span class="s-${s}">${s}</span> · ${fmt(p.d)} · with ${esc(p.w)}</small></div><button class="btn" data-act="plan" data-t="${p.t}" data-k="${p.k}">Edit</button><button class="btn ada" data-act="ada" data-t="${p.t}" data-k="${p.k}">Ada ✓</button></div>`}
+function itemPend(t,k){const p=planOf(t,k);const s=p?pStatus(p):'Not';return `<div class="item"><div class="tx"><b>${lab(t,k)}</b><small class="s-${s}">${p?s+' · '+fmt(p.d)+' · with '+esc(p.w):'Not planned'}</small></div><button class="btn" data-act="plan" data-t="${t}" data-k="${k}">${p?'Edit':'Plan'}</button><button class="btn ada" data-act="ada" data-t="${t}" data-k="${k}">Ada ✓</button></div>`}
+function vQaza(){
+ let L=qazaList();const all=L.length;
+ if(UI.qf==='np')L=L.filter(k=>!planOf('q',k));if(UI.qf==='pl')L=L.filter(k=>planOf('q',k));
+ return `<div class="card"><h2>Qaza pending · ${all}</h2><div class="note">Latest first. New Qaza from the Aaj tab appear here on their own.</div></div>
+ <div class="row">${[['all','All'],['np','Not planned'],['pl','Planned']].map(([v,n])=>`<button class="chip ${UI.qf===v?'on':''}" data-act="qf" data-v="${v}">${n}</button>`).join('')}</div>
+ <div class="card">${L.length?L.map(k=>itemPend('q',k)).join(''):'<div class="empty">No Qaza here. Alhamdulillah!</div>'}</div>`}
+function vUmari(){
+ const tot=umTotal(),ad=umAda();
+ let h=`<div class="card"><h2>Qaza-e-Umari</h2><b style="font-size:26px;color:var(--u)">${n0(tot-ad)}</b> <span class="note">baki of ${n0(tot)}</span><div class="bar"><i style="width:${tot?100*ad/tot:0}%"></i></div><div class="note">${n0(ad)} Ada done · ${fmt(S.umari.from)} → ${fmt(S.umari.through)} · 6 a day incl. Witr</div></div>
+ <div class="row">${[['all','Pending (latest first)'],['pl','Planned']].map(([v,n])=>`<button class="chip ${UI.uf===v?'on':''}" data-act="uf" data-v="${v}">${n}</button>`).join('')}</div>`;
+ if(UI.uf==='pl'){const L=S.plans.filter(p=>p.t==='u').sort((a,b)=>a.k<b.k?1:-1);return h+`<div class="card">${L.length?L.map(p=>itemPend('u',p.k)).join(''):'<div class="empty">No Umari planned yet.</div>'}</div>`}
+ h+=`<div class="card"><label class="f" for="umf">Jump to date (blank = latest)</label><input type="date" id="umf" value="${UI.umFrom}" min="${S.umari.from}" max="${S.umari.through}"></div><div class="card">`;
+ let d=UI.umFrom&&UI.umFrom<S.umari.through?UI.umFrom:S.umari.through,n=0,out='';
+ while(d>=S.umari.from&&n<UI.umLimit){for(let i=5;i>=0&&n<UI.umLimit;i--){const k=d+'|'+i;if(!S.umari.ada[k]){out+=itemPend('u',k);n++}}d=addD(d,-1)}
+ h+=(out||'<div class="empty">All Umari done. Alhamdulillah!</div>')+'</div>';
+ if(n>=UI.umLimit)h+=`<button class="btn full" data-act="more">Show more</button>`;
+ return h}
+function vSched(){
+ const L=S.plans.slice().sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:a.t<b.t?-1:1);
+ if(!L.length)return `<div class="card"><h2>Schedule</h2><div class="empty">Nothing planned. Use Plan on the Qaza or Umari tab.</div></div>`;
+ let h='',last='';const t=today();
+ for(const p of L){const g=p.d<t?'Overdue':p.d===t?'Today':fmtS(p.d);if(g!==last){if(last)h+='</div>';h+=`<div class="sec ${g}">${g==='Today'?'Today · '+fmtS(t):g}</div><div class="card">`;last=g}h+=itemPlan(p)}
+ return `<div class="card"><h2>Schedule · ${L.length} planned</h2><div class="note">Qaza and Umari together, date-wise. Ada ✓ marks it done everywhere.</div></div>`+h+'</div>'}
+function vMore(){
+ const t=today(),el=Math.max(0,days(S.start,t)+1);
+ let h=`<div class="card"><h2>Since ${fmt(S.start)} (${el} days)</h2><table><tr><th>Prayer</th><th>Padhi</th><th>Ada</th><th>Pending</th><th>Done</th></tr>`;
+ P5.forEach((p,i)=>{let P=0,A=0,Q=0;for(const r of Object.values(S.tracker)){if(r[i]==='Padhi')P++;else if(r[i]==='Qaza Ada')A++;else if(r[i]==='Qaza')Q++}h+=`<tr><td>${p}</td><td>${P}</td><td>${A}</td><td>${Q}</td><td>${pct(P+A,el)}</td></tr>`});
+ h+='</table></div><div class="card"><h2>Weekly completion</h2><div class="wk">';
+ const w0=weekStart(t);for(let k=7;k>=0;k--){const a=addD(w0,-7*k),c=count(a,addD(a,6)),v=Math.min(100,100*(c.P+c.A)/35);h+=`<div><span>${Math.round(v)}%</span><i style="height:${v}%"></i>${pd(a).getDate()} ${MON[pd(a).getMonth()]}</div>`}
+ h+=`</div></div><div class="card"><h2>Backup & Excel</h2><div class="note">Data stays on this phone. Take a backup regularly (share it to Drive / WhatsApp).</div>
+ <button class="btn pri full" data-act="exportJ">Save backup file</button>
+ <button class="btn full" data-act="importJ">Restore backup file</button>
+ <button class="btn full" data-act="importX">Import from Excel tracker (.xlsx)</button>
+ <button class="btn full" data-act="exportX">Export to Excel (.xlsx)</button>
+ <div class="note" style="margin-top:6px">Excel import/export needs internet the first time.${S.updated?' Last change: '+new Date(S.updated).toLocaleString():''}</div></div>
+ <div class="card"><h2>Settings</h2><label class="f" for="st">Tracking starts</label><input type="date" id="st" value="${S.start}">
+ <label class="f" for="uf1">Umari from</label><input type="date" id="uf1" value="${S.umari.from}"><label class="f" for="ut1">Umari through</label><input type="date" id="ut1" value="${S.umari.through}">
+ <button class="btn dan full" data-act="reset">Erase all data</button></div>`;
+ return h}
+
+const V={home:vHome,qaza:vQaza,umari:vUmari,sched:vSched,more:vMore};
+function render(){document.getElementById('app').innerHTML=V[UI.tab]();document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===UI.tab));const q=qazaList().length,o=S.plans.filter(p=>p.d<=today()).length;document.getElementById('hd').textContent=fmt(today())+(q?' · '+q+' Qaza':'')+(o?' · '+o+' due':'')}
+
+/* ---------- plan dialog ---------- */
+function openPlan(t,k){
+ const p=planOf(t,k),i=+k.split('|')[1],same=(t==='u'?P6:P5)[i],dl=document.getElementById('dlg');
+ const opts=[...P6,'Alag waqt'];
+ dl.innerHTML=`<h3>${lab(t,k)}</h3><div class="note">${t==='q'?'Qaza':'Qaza-e-Umari'}</div>
+ <label class="f" for="pd">Date</label><input type="date" id="pd" value="${p?p.d:today()}">
+ <label class="f" for="pw">With namaz</label><select id="pw">${opts.map(o=>`<option ${(p?p.w:same)===o?'selected':''}>${o}</option>`).join('')}</select>
+ <div class="dlgb">${p?'<button class="btn dan" id="prm">Un-plan</button>':''}<button class="btn" id="pc">Cancel</button><button class="btn pri" id="ps">Save</button></div>`;
+ dl.showModal();
+ dl.querySelector('#pc').onclick=()=>dl.close();
+ dl.querySelector('#ps').onclick=()=>{const d=dl.querySelector('#pd').value;if(!d){toast('Pick a date');return}snap();S.plans=S.plans.filter(x=>!(x.t===t&&x.k===k));S.plans.push({t,k,d,w:dl.querySelector('#pw').value});save();dl.close();toast('Planned for '+fmt(d),true);render()};
+ const rm=dl.querySelector('#prm');if(rm)rm.onclick=()=>{snap();S.plans=S.plans.filter(x=>!(x.t===t&&x.k===k));save();dl.close();toast('Plan removed',true);render()};
+}
+
+/* ---------- backup / excel ---------- */
+function download(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+async function shareOrDownload(name,blob){try{const f=new File([blob],name,{type:blob.type});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}}catch(e){if(e.name==='AbortError')return}download(name,blob)}
+function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=ok;s.onerror=()=>no(new Error('Needs internet once to load the Excel reader'));document.head.appendChild(s)})}
+const ser=v=>typeof v==='number'&&v>20000?ymd(new Date(1899,11,30+Math.floor(v))):null;
+function parseLab(s,arr){const m=/^(\d{1,2})-([A-Za-z]{3})-(\d{4}) (\w+)$/.exec(String(s).trim());if(!m)return null;const mo=MON.indexOf(m[2]),i=arr.indexOf(m[4]);if(mo<0||i<0)return null;return m[3]+'-'+pad(mo+1)+'-'+pad(+m[1])+'|'+i}
+async function importExcel(file){
+ await loadXLSX();
+ const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+ const cell=(ws,r,c)=>{const x=ws&&ws[XLSX.utils.encode_cell({r,c})];return x?x.v:''};
+ const last=ws=>ws&&ws['!ref']?XLSX.utils.decode_range(ws['!ref']).e.r:0;
+ const N=blank(),tr=wb.Sheets['Tracker'],um=wb.Sheets['Qaza-e-Umari'],sp=wb.Sheets['Set Plan'],st=wb.Sheets['Settings'];
+ if(!tr)throw new Error('This file has no Tracker sheet');
+ N.start=ser(cell(st,2,1))||N.start;
+ for(let r=6;r<=last(tr);r++){const d=ser(cell(tr,r,0));if(!d)continue;const v=[3,4,5,6,7].map(c=>{const x=String(cell(tr,r,c)).trim();return SC[x]?x:''});if(v.some(Boolean))N.tracker[d]=v}
+ if(um){N.umari.from=ser(cell(um,2,2))||N.umari.from;N.umari.through=ser(cell(um,2,5))||N.umari.through;
+  for(let r=11;r<=last(um);r++){const d=ser(cell(um,r,0));if(!d)continue;for(let c=1;c<=6;c++)if(String(cell(um,r,c)).trim()==='Qaza Ada')N.umari.ada[d+'|'+(c-1)]=1}}
+ if(sp)for(let r=5;r<=Math.min(last(sp),504);r++){for(const[t,c0,arr]of[['q',1,P5],['u',7,P6]]){const k=parseLab(cell(sp,r,c0),arr),d=ser(cell(sp,r,c0+1));if(k&&d)N.plans.push({t,k,d,w:String(cell(sp,r,c0+2)||(arr[+k.split('|')[1]]))})}}
+ const S0=S;S=N;cleanPlans();const msg=`${Object.keys(N.tracker).length} days, ${qazaList().length} Qaza pending, ${umAda()} Umari Ada, ${N.plans.length} plans`;S=S0;
+ if(!confirm('Replace the data in this app with the Excel data?\n\n'+msg))return;
+ snap();S=N;cleanPlans();save();UI.sel=today();toast('Imported: '+msg,true);render()}
+async function exportExcel(){
+ await loadXLSX();const wb=XLSX.utils.book_new();
+ const dts=Object.keys(S.tracker).sort();
+ const tr=[['Date','Day','Fajar','Zohar','Asar','Maghrib','Isha']];for(const d of dts)tr.push([pd(d),DOW[pd(d).getDay()],...S.tracker[d]]);
+ const um=[['Date','Prayer']];for(const k of Object.keys(S.umari.ada).sort()){const[d,i]=k.split('|');um.push([pd(d),P6[+i]])}
+ const pl=[['Type','Namaz','Date','With namaz','Status']];for(const p of S.plans.slice().sort((a,b)=>a.d<b.d?-1:1))pl.push([p.t==='q'?'Qaza':'Umari',lab(p.t,p.k),pd(p.d),p.w,pStatus(p)]);
+ for(const[n,a]of[['Tracker',tr],['Umari Ada',um],['Plans',pl]]){const ws=XLSX.utils.aoa_to_sheet(a,{cellDates:true,dateNF:'dd-mmm-yyyy'});ws['!cols']=[{wch:13},{wch:20},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12}];XLSX.utils.book_append_sheet(wb,ws,n)}
+ const out=XLSX.write(wb,{bookType:'xlsx',type:'array',cellDates:true});
+ await shareOrDownload('Namaz_Tracker_'+today()+'.xlsx',new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}))}
+
+/* ---------- events ---------- */
+const A={
+ tab:x=>{UI.tab=x.t;render();scrollTo(0,0)},
+ day:x=>{UI.sel=addD(UI.sel,+x.n);render()},
+ today:()=>{UI.sel=today();render()},
+ pick:x=>{UI.sel=x.d;render()},
+ set:x=>{setStatus(UI.sel,+x.i,x.v);render()},
+ plan:x=>openPlan(x.t,x.k),
+ ada:x=>markAda(x.t,x.k),
+ qf:x=>{UI.qf=x.v;render()},
+ uf:x=>{UI.uf=x.v;UI.umLimit=60;render()},
+ more:()=>{UI.umLimit+=60;render()},
+ exportJ:()=>shareOrDownload('Namaz_Backup_'+today()+'.json',new Blob([JSON.stringify(S)],{type:'application/json'})),
+ importJ:()=>document.getElementById('fj').click(),
+ importX:()=>document.getElementById('fx').click(),
+ exportX:()=>exportExcel().catch(e=>toast(e.message)),
+ reset:()=>{if(confirm('Erase ALL data in this app? Take a backup first.')&&confirm('Sure? This cannot be undone.')){S=blank();save();render();toast('All data erased')}}
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&A[b.dataset.act])A[b.dataset.act](b.dataset,b)});
+document.addEventListener('change',e=>{const id=e.target.id,v=e.target.value;
+ if(id==='umf'){UI.umFrom=v;UI.umLimit=60;render()}
+ else if(id==='st'&&v){S.start=v;save();render()}
+ else if(id==='uf1'&&v){S.umari.from=v;cleanPlans();save();render()}
+ else if(id==='ut1'&&v){S.umari.through=v;cleanPlans();save();render()}});
+document.getElementById('fx').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)importExcel(f).catch(er=>toast(er.message))};
+document.getElementById('fj').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const N=JSON.parse(await f.text());if(N.v!==1||!N.tracker)throw 0;if(!confirm('Restore this backup? Current data in the app will be replaced.'))return;snap();S=N;save();render();toast('Backup restored',true)}catch(er){toast('Not a Namaz Tracker backup file')}};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js');
+render();
+</script>
+</body>
+</html>

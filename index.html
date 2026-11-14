@@ -116,10 +116,12 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const pct=(a,b)=>b?(100*a/b).toFixed(1)+'%':'0%';
 const n0=n=>n.toLocaleString('en-IN');
 
-function blank(){return{v:1,start:'2026-08-20',tracker:{},umari:{from:'2014-01-01',through:'2026-08-19',ada:{}},plans:[]}}
-let S=null;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-if(!S||S.v!==1)S=blank();
-const UI={tab:'home',sel:today(),umLimit:60,umFrom:'',qf:'all',uf:'all'};
+function blank(){return{v:1,start:today(),tracker:{},umari:{on:false,from:'',through:'',ada:{}},plans:[]}}
+let S=null,fresh=false;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||S.v!==1){S=blank();fresh=true}
+const UI={tab:fresh?'welcome':'home',sel:today(),umLimit:60,umFrom:'',qf:'all',uf:'all'};
+const umOn=()=>S.umari.on!==false&&!!S.umari.from&&!!S.umari.through&&S.umari.from<=S.umari.through;
+const APP_URL='https://b0there.github.io/Namaz/';
 let undoSnap=null,toastT=0;
 
 function save(){S.updated=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Could not save on this phone')}}
@@ -129,7 +131,7 @@ document.getElementById('undo').onclick=()=>{if(undoSnap){S=JSON.parse(undoSnap)
 
 const getDay=d=>S.tracker[d]||['','','','',''];
 function setStatus(d,i,v){const r=getDay(d).slice();r[i]=r[i]===v?'':v;if(r.every(x=>!x))delete S.tracker[d];else S.tracker[d]=r;cleanPlans();save()}
-function isPending(t,k){const[d,i]=k.split('|');return t==='q'?(S.tracker[d]||[])[+i]==='Qaza':(d>=S.umari.from&&d<=S.umari.through&&!S.umari.ada[k])}
+function isPending(t,k){const[d,i]=k.split('|');return t==='q'?(S.tracker[d]||[])[+i]==='Qaza':(umOn()&&d>=S.umari.from&&d<=S.umari.through&&!S.umari.ada[k])}
 function cleanPlans(){S.plans=S.plans.filter(p=>isPending(p.t,p.k))}
 const planOf=(t,k)=>S.plans.find(p=>p.t===t&&p.k===k);
 function pStatus(p){const t=today();return p.d<t?'Overdue':p.d===t?'Today':'Planned'}
@@ -138,7 +140,7 @@ function markAda(t,k){snap();const[d,i]=k.split('|');if(t==='q'){const r=getDay(
 function weekStart(s){const d=pd(s);return addD(s,-((d.getDay()+6)%7))}
 function count(a,b){let P=0,A=0,Q=0;for(const[d,r]of Object.entries(S.tracker)){if(d<a||d>b)continue;for(const v of r){if(v==='Padhi')P++;else if(v==='Qaza Ada')A++;else if(v==='Qaza')Q++}}return{P,A,Q}}
 function qazaList(){const out=[];for(const d of Object.keys(S.tracker).sort().reverse()){const r=S.tracker[d];for(let i=4;i>=0;i--)if(r[i]==='Qaza')out.push(d+'|'+i)}return out}
-const umTotal=()=>Math.max(0,(days(S.umari.from,S.umari.through)+1)*6);
+const umTotal=()=>umOn()?Math.max(0,(days(S.umari.from,S.umari.through)+1)*6):0;
 const umAda=()=>Object.keys(S.umari.ada).length;
 
 /* ---------- views ---------- */
@@ -151,7 +153,7 @@ function vHome(){
   +`<div class="dayc ${filled===5?'ok':''}">${filled===5?'Day complete ✓':filled+' / 5 entered'}</div></div>`;
  h+='<div class="card"><div class="week">';for(let k=0;k<7;k++){const x=addD(ws,k),rr=getDay(x);h+=`<button class="wd ${x===d?'sel':''} ${x===t?'tod':''}" data-act="pick" data-d="${x}"><small>${DOW[pd(x).getDay()]}</small><b>${pd(x).getDate()}</b><div class="dots">${rr.map(v=>`<i class="${SC[v]||''}"></i>`).join('')}</div></button>`}h+='</div></div>';
  const wk=weekStart(t),cw=count(wk,addD(wk,6)),m0=t.slice(0,8)+'01',md=new Date(pd(t).getFullYear(),pd(t).getMonth()+1,0).getDate(),cm=count(m0,t.slice(0,8)+pad(md)),all=count('0000','9999'),ub=umTotal()-umAda();
- h+=`<div class="stats"><div class="stat"><small>This week</small><b>${pct(cw.P+cw.A,35)}</b><span>${cw.P+cw.A} / 35 completed</span></div><div class="stat"><small>This month</small><b>${pct(cm.P+cm.A,md*5)}</b><span>${cm.P+cm.A} / ${md*5} completed</span></div><div class="stat"><small>Current Qaza</small><b style="color:var(--q)">${all.Q}</b><span>${all.A} Qaza Ada done</span></div><div class="stat"><small>Umari baki</small><b style="color:var(--u)">${n0(ub)}</b><span>${n0(umAda())} / ${n0(umTotal())} done</span></div></div>`;
+ h+=`<div class="stats"><div class="stat"><small>This week</small><b>${pct(cw.P+cw.A,35)}</b><span>${cw.P+cw.A} / 35 completed</span></div><div class="stat"><small>This month</small><b>${pct(cm.P+cm.A,md*5)}</b><span>${cm.P+cm.A} / ${md*5} completed</span></div><div class="stat"><small>Current Qaza</small><b style="color:var(--q)">${all.Q}</b><span>${all.A} Qaza Ada done</span></div>${umOn()?`<div class="stat"><small>Umari baki</small><b style="color:var(--u)">${n0(ub)}</b><span>${n0(umAda())} / ${n0(umTotal())} done</span></div>`:`<div class="stat" data-act="tab" data-t="umari"><small>Qaza-e-Umari</small><b style="color:var(--mute)">Off</b><span>Tap to set up</span></div>`}</div>`;
  const due=S.plans.filter(p=>p.d<=t).sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
  h+=`<div class="card"><h2>Aaj ka plan (${due.length})</h2>${due.length?due.map(itemPlan).join(''):'<div class="empty">Nothing planned for today.</div>'}</div>`;
  return h}
@@ -163,7 +165,26 @@ function vQaza(){
  return `<div class="card"><h2>Qaza pending · ${all}</h2><div class="note">Latest first. New Qaza from the Aaj tab appear here on their own.</div></div>
  <div class="row">${[['all','All'],['np','Not planned'],['pl','Planned']].map(([v,n])=>`<button class="chip ${UI.qf===v?'on':''}" data-act="qf" data-v="${v}">${n}</button>`).join('')}</div>
  <div class="card">${L.length?L.map(k=>itemPend('q',k)).join(''):'<div class="empty">No Qaza here. Alhamdulillah!</div>'}</div>`}
+function umSetup(id){return `<label class="f" for="${id}f">Missed prayers from (e.g. when you became baligh)</label><input type="date" id="${id}f">
+ <label class="f" for="${id}t">Till (usually the day before you started tracking)</label><input type="date" id="${id}t" value="${addD(S.start,-1)}">
+ <div class="note" style="margin-top:6px">Counts 6 prayers a day (Fajar, Zohar, Asar, Maghrib, Isha, Witr). You can change these dates later in More → Settings.</div>`}
+function readUm(id){const f=document.getElementById(id+'f').value,t=document.getElementById(id+'t').value;if(!f||!t){toast('Enter both dates for Qaza-e-Umari');return null}if(f>t){toast('"From" must be before "Till"');return null}return{f,t}}
+function vWelcome(){
+ return `<div class="card"><h2>Assalamu Alaikum</h2><b style="font-size:18px">Namaz Tracker</b>
+ <div style="margin:8px 0 4px">A simple, private helper to keep your namaz on track:</div>
+ <div class="item"><div class="tx"><b>🕌 Daily namaz in one tap</b><small>Mark each of the 5 prayers as Padhi, Qaza (missed) or Ada (made up).</small></div></div>
+ <div class="item"><div class="tx"><b>⏳ Never lose a missed prayer</b><small>Every Qaza is listed, latest first, until you make it up.</small></div></div>
+ <div class="item"><div class="tx"><b>🗓️ Plan & schedule</b><small>Pick a date and which namaz to pray it with; see it day-wise.</small></div></div>
+ <div class="item"><div class="tx"><b>📿 Qaza-e-Umari (optional)</b><small>Track old missed prayers from past years and watch the count go down.</small></div></div>
+ <div class="note" style="margin-top:8px">🔒 No login, no account, no ads. Your data stays only on this phone and works offline.</div></div>
+ <div class="card"><h2>Set up · 1 minute</h2>
+ <label class="f" for="w_start">Start tracking from</label><input type="date" id="w_start" value="${today()}">
+ <label class="row" style="margin:12px 0 0;gap:10px;flex-wrap:nowrap"><input type="checkbox" id="w_um" style="width:22px;height:22px;flex:none"> <span>I also want to track Qaza-e-Umari (old missed prayers)</span></label>
+ <div id="w_umbox" hidden>${umSetup('w_u')}</div>
+ <button class="btn pri full" data-act="wstart" style="margin-top:14px">Bismillah – Start</button></div>
+ <div class="card"><h2>Already have data?</h2><button class="btn full" data-act="importJ">Restore a backup file</button><button class="btn full" data-act="importX">Import from Namaz Tracker Excel (.xlsx)</button></div>`}
 function vUmari(){
+ if(!umOn())return `<div class="card"><h2>Qaza-e-Umari</h2><div class="note">Prayers missed in past years (before you started tracking). Enter the period once; the app counts them and lists them latest first so you can make them up one by one.</div>${umSetup('u_s')}<button class="btn pri full" data-act="umOn">Start tracking Qaza-e-Umari</button></div>`;
  const tot=umTotal(),ad=umAda();
  let h=`<div class="card"><h2>Qaza-e-Umari</h2><b style="font-size:26px;color:var(--u)">${n0(tot-ad)}</b> <span class="note">baki of ${n0(tot)}</span><div class="bar"><i style="width:${tot?100*ad/tot:0}%"></i></div><div class="note">${n0(ad)} Ada done · ${fmt(S.umari.from)} → ${fmt(S.umari.through)} · 6 a day incl. Witr</div></div>
  <div class="row">${[['all','Pending (latest first)'],['pl','Planned']].map(([v,n])=>`<button class="chip ${UI.uf===v?'on':''}" data-act="uf" data-v="${v}">${n}</button>`).join('')}</div>`;
@@ -193,12 +214,22 @@ function vMore(){
  <button class="btn full" data-act="exportX">Export to Excel (.xlsx)</button>
  <div class="note" style="margin-top:6px">Excel import/export needs internet the first time.${S.updated?' Last change: '+new Date(S.updated).toLocaleString():''}</div></div>
  <div class="card"><h2>Settings</h2><label class="f" for="st">Tracking starts</label><input type="date" id="st" value="${S.start}">
- <label class="f" for="uf1">Umari from</label><input type="date" id="uf1" value="${S.umari.from}"><label class="f" for="ut1">Umari through</label><input type="date" id="ut1" value="${S.umari.through}">
- <button class="btn dan full" data-act="reset">Erase all data</button></div>`;
+ ${umOn()?`<label class="f" for="uf1">Qaza-e-Umari from</label><input type="date" id="uf1" value="${S.umari.from}"><label class="f" for="ut1">Qaza-e-Umari till</label><input type="date" id="ut1" value="${S.umari.through}"><button class="btn full" data-act="umOff">Turn off Qaza-e-Umari</button>`:`<div class="note" style="margin-top:8px">Qaza-e-Umari is off. Set it up from the Umari tab.</div>`}
+ <button class="btn dan full" data-act="reset">Erase all data</button></div>
+ <div class="card"><h2>How to use</h2>
+ <div class="item"><div class="tx"><b>1 · Aaj</b><small>After each namaz tap Padhi. Missed it? Tap Qaza. Use ‹ › or the week strip for other days. Tap again to clear.</small></div></div>
+ <div class="item"><div class="tx"><b>2 · Qaza</b><small>All missed prayers, latest first. Plan = pick a date + which namaz to pray it with. Ada ✓ = prayed it.</small></div></div>
+ <div class="item"><div class="tx"><b>3 · Umari</b><small>Optional: old missed prayers from past years, latest first. Jump to any date.</small></div></div>
+ <div class="item"><div class="tx"><b>4 · Schedule</b><small>Your plans day-wise: Overdue, Today, Upcoming. Mark Ada ✓ from here.</small></div></div>
+ <div class="item"><div class="tx"><b>5 · Backup</b><small>Data lives only on this phone. Save a backup weekly and keep it in Drive / WhatsApp.</small></div></div>
+ <div class="note" style="margin-top:6px">Made a mistake? Tap Undo at the bottom right after.</div></div>
+ <div class="card"><h2>Share this app</h2><div class="note">Friends get a fresh, empty app – your data is never shared.</div>
+ <button class="btn pri full" data-act="share">Share Namaz Tracker</button>
+ <div class="note" style="margin-top:6px">To install: open the link in Chrome → ⋮ → Install app (or Add to Home screen).</div></div>`;
  return h}
 
-const V={home:vHome,qaza:vQaza,umari:vUmari,sched:vSched,more:vMore};
-function render(){document.getElementById('app').innerHTML=V[UI.tab]();document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===UI.tab));const q=qazaList().length,o=S.plans.filter(p=>p.d<=today()).length;document.getElementById('hd').textContent=fmt(today())+(q?' · '+q+' Qaza':'')+(o?' · '+o+' due':'')}
+const V={welcome:vWelcome,home:vHome,qaza:vQaza,umari:vUmari,sched:vSched,more:vMore};
+function render(){document.getElementById('app').innerHTML=V[UI.tab]();document.getElementById('nav').style.display=UI.tab==='welcome'?'none':'';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===UI.tab));const q=qazaList().length,o=S.plans.filter(p=>p.d<=today()).length;document.getElementById('hd').textContent=fmt(today())+(q?' · '+q+' Qaza':'')+(o?' · '+o+' due':'')}
 
 /* ---------- plan dialog ---------- */
 function openPlan(t,k){
@@ -229,12 +260,12 @@ async function importExcel(file){
  if(!tr)throw new Error('This file has no Tracker sheet');
  N.start=ser(cell(st,2,1))||N.start;
  for(let r=6;r<=last(tr);r++){const d=ser(cell(tr,r,0));if(!d)continue;const v=[3,4,5,6,7].map(c=>{const x=String(cell(tr,r,c)).trim();return SC[x]?x:''});if(v.some(Boolean))N.tracker[d]=v}
- if(um){N.umari.from=ser(cell(um,2,2))||N.umari.from;N.umari.through=ser(cell(um,2,5))||N.umari.through;
+ if(um){N.umari.on=true;N.umari.from=ser(cell(um,2,2))||'2014-01-01';N.umari.through=ser(cell(um,2,5))||addD(N.start,-1);
   for(let r=11;r<=last(um);r++){const d=ser(cell(um,r,0));if(!d)continue;for(let c=1;c<=6;c++)if(String(cell(um,r,c)).trim()==='Qaza Ada')N.umari.ada[d+'|'+(c-1)]=1}}
  if(sp)for(let r=5;r<=Math.min(last(sp),504);r++){for(const[t,c0,arr]of[['q',1,P5],['u',7,P6]]){const k=parseLab(cell(sp,r,c0),arr),d=ser(cell(sp,r,c0+1));if(k&&d)N.plans.push({t,k,d,w:String(cell(sp,r,c0+2)||(arr[+k.split('|')[1]]))})}}
  const S0=S;S=N;cleanPlans();const msg=`${Object.keys(N.tracker).length} days, ${qazaList().length} Qaza pending, ${umAda()} Umari Ada, ${N.plans.length} plans`;S=S0;
  if(!confirm('Replace the data in this app with the Excel data?\n\n'+msg))return;
- snap();S=N;cleanPlans();save();UI.sel=today();toast('Imported: '+msg,true);render()}
+ snap();S=N;cleanPlans();save();UI.sel=today();if(UI.tab==='welcome')UI.tab='home';toast('Imported: '+msg,true);render()}
 async function exportExcel(){
  await loadXLSX();const wb=XLSX.utils.book_new();
  const dts=Object.keys(S.tracker).sort();
@@ -261,16 +292,25 @@ const A={
  importJ:()=>document.getElementById('fj').click(),
  importX:()=>document.getElementById('fx').click(),
  exportX:()=>exportExcel().catch(e=>toast(e.message)),
- reset:()=>{if(confirm('Erase ALL data in this app? Take a backup first.')&&confirm('Sure? This cannot be undone.')){S=blank();save();render();toast('All data erased')}}
+ reset:()=>{if(confirm('Erase ALL data in this app? Take a backup first.')&&confirm('Sure? This cannot be undone.')){S=blank();try{localStorage.removeItem(KEY)}catch(e){}UI.tab='welcome';render();toast('All data erased')}},
+ wstart:()=>{const st=document.getElementById('w_start').value||today();let u=null;if(document.getElementById('w_um').checked){u=readUm('w_u');if(!u)return}
+  S=blank();S.start=st;if(u)S.umari={on:true,from:u.f,through:u.t,ada:{}};save();UI.tab='home';UI.sel=today();render();scrollTo(0,0);toast('Bismillah! Mark today\'s namaz below.')},
+ umOn:()=>{const u=readUm('u_s');if(!u)return;S.umari={on:true,from:u.f,through:u.t,ada:S.umari.ada||{}};save();render();toast('Qaza-e-Umari tracking started')},
+ umOff:()=>{if(!confirm('Turn off Qaza-e-Umari? Its Umari plans are hidden; Ada already marked is kept.'))return;snap();S.umari.on=false;cleanPlans();save();render();toast('Qaza-e-Umari turned off',true)},
+ share:async()=>{const text='Namaz Tracker – free, private app to mark daily namaz, track every Qaza and plan when to make it up (Qaza-e-Umari too). Works offline, no login.\n\nInstall: open in Chrome → ⋮ → Install app.\n';
+  try{if(navigator.share){await navigator.share({title:'Namaz Tracker',text,url:APP_URL});return}}catch(e){if(e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(text+APP_URL);toast('Link copied – paste it in WhatsApp')}catch(e){toast(APP_URL)}}
 };
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&A[b.dataset.act])A[b.dataset.act](b.dataset,b)});
 document.addEventListener('change',e=>{const id=e.target.id,v=e.target.value;
- if(id==='umf'){UI.umFrom=v;UI.umLimit=60;render()}
+ if(id==='w_um'){document.getElementById('w_umbox').hidden=!e.target.checked}
+ else if(id==='w_start'&&v){const t=document.getElementById('w_ut');if(t)t.value=addD(v,-1)}
+ else if(id==='umf'){UI.umFrom=v;UI.umLimit=60;render()}
  else if(id==='st'&&v){S.start=v;save();render()}
  else if(id==='uf1'&&v){S.umari.from=v;cleanPlans();save();render()}
  else if(id==='ut1'&&v){S.umari.through=v;cleanPlans();save();render()}});
 document.getElementById('fx').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)importExcel(f).catch(er=>toast(er.message))};
-document.getElementById('fj').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const N=JSON.parse(await f.text());if(N.v!==1||!N.tracker)throw 0;if(!confirm('Restore this backup? Current data in the app will be replaced.'))return;snap();S=N;save();render();toast('Backup restored',true)}catch(er){toast('Not a Namaz Tracker backup file')}};
+document.getElementById('fj').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const N=JSON.parse(await f.text());if(N.v!==1||!N.tracker)throw 0;if(!confirm('Restore this backup? Current data in the app will be replaced.'))return;snap();S=N;save();if(UI.tab==='welcome')UI.tab='home';render();toast('Backup restored',true)}catch(er){toast('Not a Namaz Tracker backup file')}};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js');

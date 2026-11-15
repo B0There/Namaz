@@ -91,6 +91,7 @@ dialog h3{margin:0 0 4px}
  <button data-act="tab" data-t="qaza"><i>⏳</i>Qaza</button>
  <button data-act="tab" data-t="umari"><i>📿</i>Umari</button>
  <button data-act="tab" data-t="sched"><i>🗓️</i>Schedule</button>
+ <button data-act="tab" data-t="hist"><i>📝</i>History</button>
  <button data-act="tab" data-t="more"><i>⋯</i>More</button>
 </nav>
 <div id="toast"><span></span><button id="undo">Undo</button></div>
@@ -116,9 +117,12 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const pct=(a,b)=>b?(100*a/b).toFixed(1)+'%':'0%';
 const n0=n=>n.toLocaleString('en-IN');
 
-function blank(){return{v:1,start:today(),tracker:{},umari:{on:false,from:'',through:'',ada:{}},plans:[]}}
+function blank(){return{v:1,start:today(),tracker:{},umari:{on:false,from:'',through:'',ada:{}},plans:[],log:[]}}
 let S=null,fresh=false;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!S||S.v!==1){S=blank();fresh=true}
+if(!Array.isArray(S.log))S.log=[];
+function log(e){e.ts=Date.now();S.log.push(e);if(S.log.length>3000)S.log.splice(0,S.log.length-3000)}
+const fmtTs=ts=>{const d=new Date(ts);let h=d.getHours();const ap=h<12?'AM':'PM';h=h%12||12;return d.getDate()+' '+MON[d.getMonth()]+', '+h+':'+pad(d.getMinutes())+' '+ap};
 const UI={tab:fresh?'welcome':'home',sel:today(),umLimit:60,umFrom:'',qf:'all',uf:'all'};
 const umOn=()=>S.umari.on!==false&&!!S.umari.from&&!!S.umari.through&&S.umari.from<=S.umari.through;
 const APP_URL='https://b0there.github.io/Namaz/';
@@ -130,12 +134,12 @@ function toast(msg,undo){const t=document.getElementById('toast');t.querySelecto
 document.getElementById('undo').onclick=()=>{if(undoSnap){S=JSON.parse(undoSnap);undoSnap=null;save();render()}document.getElementById('toast').classList.remove('show')};
 
 const getDay=d=>S.tracker[d]||['','','','',''];
-function setStatus(d,i,v){const r=getDay(d).slice();r[i]=r[i]===v?'':v;if(r.every(x=>!x))delete S.tracker[d];else S.tracker[d]=r;cleanPlans();save()}
+function setStatus(d,i,v){const r=getDay(d).slice(),from=r[i];r[i]=r[i]===v?'':v;if(r.every(x=>!x))delete S.tracker[d];else S.tracker[d]=r;log({a:'set',k:d+'|'+i,from,to:r[i]});cleanPlans();save()}
 function isPending(t,k){const[d,i]=k.split('|');return t==='q'?(S.tracker[d]||[])[+i]==='Qaza':(umOn()&&d>=S.umari.from&&d<=S.umari.through&&!S.umari.ada[k])}
 function cleanPlans(){S.plans=S.plans.filter(p=>isPending(p.t,p.k))}
 const planOf=(t,k)=>S.plans.find(p=>p.t===t&&p.k===k);
 function pStatus(p){const t=today();return p.d<t?'Overdue':p.d===t?'Today':'Planned'}
-function markAda(t,k){snap();const[d,i]=k.split('|');if(t==='q'){const r=getDay(d).slice();r[+i]='Qaza Ada';S.tracker[d]=r}else S.umari.ada[k]=1;cleanPlans();save();toast('Ada ✓  '+lab(t,k),true);render()}
+function markAda(t,k){snap();const[d,i]=k.split('|');if(t==='q'){const r=getDay(d).slice();r[+i]='Qaza Ada';S.tracker[d]=r}else S.umari.ada[k]=1;log({a:'ada',t,k});cleanPlans();save();toast('Ada ✓  '+lab(t,k),true);render()}
 
 function weekStart(s){const d=pd(s);return addD(s,-((d.getDay()+6)%7))}
 function count(a,b){let P=0,A=0,Q=0;for(const[d,r]of Object.entries(S.tracker)){if(d<a||d>b)continue;for(const v of r){if(v==='Padhi')P++;else if(v==='Qaza Ada')A++;else if(v==='Qaza')Q++}}return{P,A,Q}}
@@ -221,14 +225,53 @@ function vMore(){
  <div class="item"><div class="tx"><b>2 · Qaza</b><small>All missed prayers, latest first. Plan = pick a date + which namaz to pray it with. Ada ✓ = prayed it.</small></div></div>
  <div class="item"><div class="tx"><b>3 · Umari</b><small>Optional: old missed prayers from past years, latest first. Jump to any date.</small></div></div>
  <div class="item"><div class="tx"><b>4 · Schedule</b><small>Your plans day-wise: Overdue, Today, Upcoming. Mark Ada ✓ from here.</small></div></div>
- <div class="item"><div class="tx"><b>5 · Backup</b><small>Data lives only on this phone. Save a backup weekly and keep it in Drive / WhatsApp.</small></div></div>
+ <div class="item"><div class="tx"><b>5 · History</b><small>Everything you did, with time. “Changes for PC” lists exactly what to update in the Excel tracker; tap “PC updated” after.</small></div></div>
+ <div class="item"><div class="tx"><b>6 · Backup</b><small>Data lives only on this phone. Save a backup weekly and keep it in Drive / WhatsApp.</small></div></div>
  <div class="note" style="margin-top:6px">Made a mistake? Tap Undo at the bottom right after.</div></div>
  <div class="card"><h2>Share this app</h2><div class="note">Friends get a fresh, empty app – your data is never shared.</div>
  <button class="btn pri full" data-act="share">Share Namaz Tracker</button>
  <div class="note" style="margin-top:6px">To install: open the link in Chrome → ⋮ → Install app (or Add to Home screen).</div></div>`;
  return h}
 
-const V={welcome:vWelcome,home:vHome,qaza:vQaza,umari:vUmari,sched:vSched,more:vMore};
+/* ---------- history ---------- */
+const tName=t=>t==='q'?'Qaza':'Umari';
+function logText(e){
+ if(e.a==='set'){const[d,i]=e.k.split('|');return `${fmt(d)} ${P5[i]}: ${e.from||'blank'} → ${e.to||'blank'}`}
+ if(e.a==='ada')return `${tName(e.t)} Ada ✓ ${lab(e.t,e.k)}`;
+ if(e.a==='plan')return `Planned ${tName(e.t)} ${lab(e.t,e.k)} on ${fmt(e.d)} with ${e.w}`;
+ if(e.a==='unplan')return `Un-planned ${tName(e.t)} ${lab(e.t,e.k)}`;
+ if(e.a==='sync')return '✓ PC updated';
+ return e.msg||''}
+function changes(){
+ const since=S.syncAt||0,L=S.log.filter(e=>e.ts>since),first={},trk=new Set(),um=new Set(),pl=new Set();
+ for(const e of L){
+  if(e.a==='set'){if(!(e.k in first))first[e.k]=e.from||'';trk.add(e.k)}
+  else if(e.a==='ada'){if(e.t==='q'){if(!(e.k in first))first[e.k]='Qaza';trk.add(e.k)}else um.add(e.k)}
+  else if(e.a==='plan'||e.a==='unplan')pl.add(e.t+'#'+e.k)}
+ const T={};for(const k of [...trk].sort()){const[d,i]=k.split('|'),now=getDay(d)[+i]||'';if(now!==first[k])(T[d]=T[d]||[]).push(P5[i]+' = '+(now||'(clear)'))}
+ const U={};for(const k of [...um].filter(k=>S.umari.ada[k]).sort().reverse()){const[d,i]=k.split('|');(U[d]=U[d]||[]).push(P6[i])}
+ const P=[...pl].map(x=>{const[t,k]=x.split('#'),p=planOf(t,k);return `${tName(t)} ${lab(t,k)} → ${p?fmt(p.d)+' with '+p.w:(isPending(t,k)?'removed':'done (Ada)')}`});
+ return{since,T,U,P,n:L.filter(e=>e.a!=='note').length}}
+function changesText(c){
+ let s=`Namaz Tracker – changes for PC\n${c.since?'Since '+fmtTs(c.since):'All recorded changes'} (till ${fmtTs(Date.now())})\n`;
+ const td=Object.keys(c.T).sort();if(td.length){s+='\nTRACKER sheet\n';for(const d of td)s+=`${fmt(d)} (${DOW[pd(d).getDay()]}): ${c.T[d].join(', ')}\n`}
+ const ud=Object.keys(c.U).sort().reverse();if(ud.length){s+='\nQAZA-E-UMARI sheet (mark Qaza Ada)\n';for(const d of ud)s+=`${fmt(d)}: ${c.U[d].join(', ')}\n`}
+ if(c.P.length){s+='\nSET PLAN sheet\n'+c.P.join('\n')+'\n'}
+ if(!td.length&&!ud.length&&!c.P.length)s+='\nNo changes.\n';
+ return s}
+function vHist(){
+ const c=changes(),td=Object.keys(c.T).sort(),ud=Object.keys(c.U).sort().reverse(),none=!td.length&&!ud.length&&!c.P.length;
+ let h=`<div class="card"><h2>Changes for PC</h2><div class="note">${c.since?'Since last PC update · '+fmtTs(c.since):'Everything recorded so far'}. Update these in the Excel tracker, then tap “PC updated”.</div>`;
+ if(none)h+='<div class="empty">No changes. PC and phone match.</div>';
+ if(td.length)h+='<div class="sec">Tracker sheet</div>'+td.map(d=>`<div class="item"><div class="tx"><b>${fmt(d)} · ${DOW[pd(d).getDay()]}</b><small>${c.T[d].map(esc).join(' · ')}</small></div></div>`).join('');
+ if(ud.length)h+='<div class="sec">Qaza-e-Umari sheet · mark Qaza Ada</div>'+ud.map(d=>`<div class="item"><div class="tx"><b>${fmt(d)}</b><small>${c.U[d].join(' · ')}</small></div></div>`).join('');
+ if(c.P.length)h+='<div class="sec">Set Plan sheet</div>'+c.P.map(x=>`<div class="item"><div class="tx"><small style="color:var(--ink)">${esc(x)}</small></div></div>`).join('');
+ h+=`<button class="btn pri full" data-act="shareCh">Send / copy this list</button>${none?'':'<button class="btn full" data-act="synced">✓ PC updated – start fresh</button>'}</div>`;
+ const L=S.log.slice().reverse(),lim=UI.hLimit||100;
+ h+=`<div class="card"><h2>History · ${S.log.length}</h2>${L.length?L.slice(0,lim).map(e=>`<div class="item"><div class="tx"><b style="font-weight:500">${esc(logText(e))}</b><small>${fmtTs(e.ts)}</small></div></div>`).join(''):'<div class="empty">Nothing yet. Your actions will appear here.</div>'}</div>`;
+ if(L.length>lim)h+='<button class="btn full" data-act="hmore">Show more</button>';
+ return h}
+const V={welcome:vWelcome,home:vHome,qaza:vQaza,umari:vUmari,sched:vSched,hist:vHist,more:vMore};
 function render(){document.getElementById('app').innerHTML=V[UI.tab]();document.getElementById('nav').style.display=UI.tab==='welcome'?'none':'';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===UI.tab));const q=qazaList().length,o=S.plans.filter(p=>p.d<=today()).length;document.getElementById('hd').textContent=fmt(today())+(q?' · '+q+' Qaza':'')+(o?' · '+o+' due':'')}
 
 /* ---------- plan dialog ---------- */
@@ -241,8 +284,8 @@ function openPlan(t,k){
  <div class="dlgb">${p?'<button class="btn dan" id="prm">Un-plan</button>':''}<button class="btn" id="pc">Cancel</button><button class="btn pri" id="ps">Save</button></div>`;
  dl.showModal();
  dl.querySelector('#pc').onclick=()=>dl.close();
- dl.querySelector('#ps').onclick=()=>{const d=dl.querySelector('#pd').value;if(!d){toast('Pick a date');return}snap();S.plans=S.plans.filter(x=>!(x.t===t&&x.k===k));S.plans.push({t,k,d,w:dl.querySelector('#pw').value});save();dl.close();toast('Planned for '+fmt(d),true);render()};
- const rm=dl.querySelector('#prm');if(rm)rm.onclick=()=>{snap();S.plans=S.plans.filter(x=>!(x.t===t&&x.k===k));save();dl.close();toast('Plan removed',true);render()};
+ dl.querySelector('#ps').onclick=()=>{const d=dl.querySelector('#pd').value;if(!d){toast('Pick a date');return}snap();S.plans=S.plans.filter(x=>!(x.t===t&&x.k===k));const w=dl.querySelector('#pw').value;S.plans.push({t,k,d,w});log({a:'plan',t,k,d,w});save();dl.close();toast('Planned for '+fmt(d),true);render()};
+ const rm=dl.querySelector('#prm');if(rm)rm.onclick=()=>{snap();S.plans=S.plans.filter(x=>!(x.t===t&&x.k===k));log({a:'unplan',t,k});save();dl.close();toast('Plan removed',true);render()};
 }
 
 /* ---------- backup / excel ---------- */
@@ -265,7 +308,7 @@ async function importExcel(file){
  if(sp)for(let r=5;r<=Math.min(last(sp),504);r++){for(const[t,c0,arr]of[['q',1,P5],['u',7,P6]]){const k=parseLab(cell(sp,r,c0),arr),d=ser(cell(sp,r,c0+1));if(k&&d)N.plans.push({t,k,d,w:String(cell(sp,r,c0+2)||(arr[+k.split('|')[1]]))})}}
  const S0=S;S=N;cleanPlans();const msg=`${Object.keys(N.tracker).length} days, ${qazaList().length} Qaza pending, ${umAda()} Umari Ada, ${N.plans.length} plans`;S=S0;
  if(!confirm('Replace the data in this app with the Excel data?\n\n'+msg))return;
- snap();S=N;cleanPlans();save();UI.sel=today();if(UI.tab==='welcome')UI.tab='home';toast('Imported: '+msg,true);render()}
+ snap();S=N;cleanPlans();S.log=[];log({a:'note',msg:'Imported from Excel: '+msg});S.syncAt=Date.now();save();UI.sel=today();if(UI.tab==='welcome')UI.tab='home';toast('Imported: '+msg,true);render()}
 async function exportExcel(){
  await loadXLSX();const wb=XLSX.utils.book_new();
  const dts=Object.keys(S.tracker).sort();
@@ -294,9 +337,14 @@ const A={
  exportX:()=>exportExcel().catch(e=>toast(e.message)),
  reset:()=>{if(confirm('Erase ALL data in this app? Take a backup first.')&&confirm('Sure? This cannot be undone.')){S=blank();try{localStorage.removeItem(KEY)}catch(e){}UI.tab='welcome';render();toast('All data erased')}},
  wstart:()=>{const st=document.getElementById('w_start').value||today();let u=null;if(document.getElementById('w_um').checked){u=readUm('w_u');if(!u)return}
-  S=blank();S.start=st;if(u)S.umari={on:true,from:u.f,through:u.t,ada:{}};save();UI.tab='home';UI.sel=today();render();scrollTo(0,0);toast('Bismillah! Mark today\'s namaz below.')},
- umOn:()=>{const u=readUm('u_s');if(!u)return;S.umari={on:true,from:u.f,through:u.t,ada:S.umari.ada||{}};save();render();toast('Qaza-e-Umari tracking started')},
- umOff:()=>{if(!confirm('Turn off Qaza-e-Umari? Its Umari plans are hidden; Ada already marked is kept.'))return;snap();S.umari.on=false;cleanPlans();save();render();toast('Qaza-e-Umari turned off',true)},
+  S=blank();S.start=st;S.log=[];if(u)S.umari={on:true,from:u.f,through:u.t,ada:{}};log({a:'note',msg:'Started tracking from '+fmt(st)+(u?' · Qaza-e-Umari '+fmt(u.f)+' → '+fmt(u.t):'')});save();UI.tab='home';UI.sel=today();render();scrollTo(0,0);toast('Bismillah! Mark today\'s namaz below.')},
+ umOn:()=>{const u=readUm('u_s');if(!u)return;S.umari={on:true,from:u.f,through:u.t,ada:S.umari.ada||{}};log({a:'note',msg:'Qaza-e-Umari on: '+fmt(u.f)+' → '+fmt(u.t)});save();render();toast('Qaza-e-Umari tracking started')},
+ umOff:()=>{if(!confirm('Turn off Qaza-e-Umari? Its Umari plans are hidden; Ada already marked is kept.'))return;snap();S.umari.on=false;log({a:'note',msg:'Qaza-e-Umari turned off'});cleanPlans();save();render();toast('Qaza-e-Umari turned off',true)},
+ hmore:()=>{UI.hLimit=(UI.hLimit||100)+100;render()},
+ synced:()=>{if(!confirm('Have you updated these changes in the Excel tracker on PC? The list will start fresh (history stays).'))return;snap();log({a:'sync'});S.syncAt=Date.now();save();render();toast('Marked as PC updated',true)},
+ shareCh:async()=>{const text=changesText(changes());
+  try{if(navigator.share){await navigator.share({title:'Namaz changes for PC',text});return}}catch(e){if(e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(text);toast('Copied – paste it in WhatsApp / notes')}catch(e){toast('Could not copy on this phone')}},
  share:async()=>{const text='Namaz Tracker – free, private app to mark daily namaz, track every Qaza and plan when to make it up (Qaza-e-Umari too). Works offline, no login.\n\nInstall: open in Chrome → ⋮ → Install app.\n';
   try{if(navigator.share){await navigator.share({title:'Namaz Tracker',text,url:APP_URL});return}}catch(e){if(e.name==='AbortError')return}
   try{await navigator.clipboard.writeText(text+APP_URL);toast('Link copied – paste it in WhatsApp')}catch(e){toast(APP_URL)}}

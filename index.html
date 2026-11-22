@@ -225,7 +225,7 @@ function vMore(){
  <div class="item"><div class="tx"><b>2 · Qaza</b><small>All missed prayers, latest first. Plan = pick a date + which namaz to pray it with. Ada ✓ = prayed it.</small></div></div>
  <div class="item"><div class="tx"><b>3 · Umari</b><small>Optional: old missed prayers from past years, latest first. Jump to any date.</small></div></div>
  <div class="item"><div class="tx"><b>4 · Schedule</b><small>Your plans day-wise: Overdue, Today, Upcoming. Mark Ada ✓ from here.</small></div></div>
- <div class="item"><div class="tx"><b>5 · History</b><small>Everything you did, with time. “Changes for PC” lists exactly what to update in the Excel tracker; tap “PC updated” after.</small></div></div>
+ <div class="item"><div class="tx"><b>5 · History</b><small>Ada record: every old Qaza / Umari you made up and the day you prayed it (corrected mistakes are left out). “Changes for PC” lists what to update in the Excel tracker; tap “PC updated” after.</small></div></div>
  <div class="item"><div class="tx"><b>6 · Backup</b><small>Data lives only on this phone. Save a backup weekly and keep it in Drive / WhatsApp.</small></div></div>
  <div class="note" style="margin-top:6px">Made a mistake? Tap Undo at the bottom right after.</div></div>
  <div class="card"><h2>Share this app</h2><div class="note">Friends get a fresh, empty app – your data is never shared.</div>
@@ -259,17 +259,31 @@ function changesText(c){
  if(c.P.length){s+='\nSET PLAN sheet\n'+c.P.join('\n')+'\n'}
  if(!td.length&&!ud.length&&!c.P.length)s+='\nNo changes.\n';
  return s}
+/* final Ada record: only Ada that is still Ada now, latest action time per prayer (mistakes that were corrected drop out) */
+function adaRecord(){
+ const m={};
+ for(const e of S.log){let t=null;if(e.a==='ada')t=e.t;else if(e.a==='set'&&e.to==='Qaza Ada')t='q';if(t)m[t+'#'+e.k]={t,k:e.k,ts:e.ts}}
+ return Object.values(m).filter(x=>{if(x.t==='u')return !!S.umari.ada[x.k];const[d,i]=x.k.split('|');return getDay(d)[+i]==='Qaza Ada'}).sort((a,b)=>b.ts-a.ts)}
+function adaText(L){
+ let s=`Namaz Tracker – Ada record (${L.length})\n`,last='';
+ for(const x of L){const d=ymd(new Date(x.ts));if(d!==last){s+=`\nPrayed on ${fmt(d)}\n`;last=d}s+=`• ${tName(x.t)} ${lab(x.t,x.k)}\n`}
+ return s}
 function vHist(){
+ const all=adaRecord(),f=UI.af||'all',L=f==='all'?all:all.filter(x=>x.t===f),lim=UI.hLimit||100;
+ let h=`<div class="card"><h2>Ada record · ${L.length}</h2><div class="note">Every old Qaza / Umari you made up, with the day you prayed it. Mistakes you corrected are not shown. Use it to match with the Excel tracker.</div></div>
+ <div class="row">${[['all','All'],['q','Qaza'],['u','Umari']].map(([v,n])=>`<button class="chip ${f===v?'on':''}" data-act="af" data-v="${v}">${n}</button>`).join('')}</div>`;
+ if(!L.length)h+='<div class="card"><div class="empty">No Ada recorded yet. When you tap Ada ✓ it shows up here.</div></div>';
+ else{let last='';for(const x of L.slice(0,lim)){const d=ymd(new Date(x.ts));if(d!==last){if(last)h+='</div>';h+=`<div class="sec">Prayed on ${d===today()?'Today · ':''}${fmtS(d)}</div><div class="card">`;last=d}
+  h+=`<div class="item"><div class="tx"><b><span class="tag t-${x.t}">${tName(x.t)}</span>${lab(x.t,x.k)}</b><small>Marked Ada · ${fmtTs(x.ts)}</small></div></div>`}h+='</div>';
+  if(L.length>lim)h+='<button class="btn full" data-act="hmore">Show more</button>';
+  h+='<button class="btn pri full" data-act="shareAda">Send / copy Ada record</button>'}
  const c=changes(),td=Object.keys(c.T).sort(),ud=Object.keys(c.U).sort().reverse(),none=!td.length&&!ud.length&&!c.P.length;
- let h=`<div class="card"><h2>Changes for PC</h2><div class="note">${c.since?'Since last PC update · '+fmtTs(c.since):'Everything recorded so far'}. Update these in the Excel tracker, then tap “PC updated”.</div>`;
+ h+=`<div class="card" style="margin-top:16px"><h2>Changes for PC</h2><div class="note">${c.since?'Since last PC update · '+fmtTs(c.since):'Everything recorded so far'}. Update these in the Excel tracker, then tap “PC updated”.</div>`;
  if(none)h+='<div class="empty">No changes. PC and phone match.</div>';
  if(td.length)h+='<div class="sec">Tracker sheet</div>'+td.map(d=>`<div class="item"><div class="tx"><b>${fmt(d)} · ${DOW[pd(d).getDay()]}</b><small>${c.T[d].map(esc).join(' · ')}</small></div></div>`).join('');
  if(ud.length)h+='<div class="sec">Qaza-e-Umari sheet · mark Qaza Ada</div>'+ud.map(d=>`<div class="item"><div class="tx"><b>${fmt(d)}</b><small>${c.U[d].join(' · ')}</small></div></div>`).join('');
  if(c.P.length)h+='<div class="sec">Set Plan sheet</div>'+c.P.map(x=>`<div class="item"><div class="tx"><small style="color:var(--ink)">${esc(x)}</small></div></div>`).join('');
  h+=`<button class="btn pri full" data-act="shareCh">Send / copy this list</button>${none?'':'<button class="btn full" data-act="synced">✓ PC updated – start fresh</button>'}</div>`;
- const L=S.log.slice().reverse(),lim=UI.hLimit||100;
- h+=`<div class="card"><h2>History · ${S.log.length}</h2>${L.length?L.slice(0,lim).map(e=>`<div class="item"><div class="tx"><b style="font-weight:500">${esc(logText(e))}</b><small>${fmtTs(e.ts)}</small></div></div>`).join(''):'<div class="empty">Nothing yet. Your actions will appear here.</div>'}</div>`;
- if(L.length>lim)h+='<button class="btn full" data-act="hmore">Show more</button>';
  return h}
 const V={welcome:vWelcome,home:vHome,qaza:vQaza,umari:vUmari,sched:vSched,hist:vHist,more:vMore};
 function render(){document.getElementById('app').innerHTML=V[UI.tab]();document.getElementById('nav').style.display=UI.tab==='welcome'?'none':'';document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===UI.tab));const q=qazaList().length,o=S.plans.filter(p=>p.d<=today()).length;document.getElementById('hd').textContent=fmt(today())+(q?' · '+q+' Qaza':'')+(o?' · '+o+' due':'')}
@@ -341,6 +355,10 @@ const A={
  umOn:()=>{const u=readUm('u_s');if(!u)return;S.umari={on:true,from:u.f,through:u.t,ada:S.umari.ada||{}};log({a:'note',msg:'Qaza-e-Umari on: '+fmt(u.f)+' → '+fmt(u.t)});save();render();toast('Qaza-e-Umari tracking started')},
  umOff:()=>{if(!confirm('Turn off Qaza-e-Umari? Its Umari plans are hidden; Ada already marked is kept.'))return;snap();S.umari.on=false;log({a:'note',msg:'Qaza-e-Umari turned off'});cleanPlans();save();render();toast('Qaza-e-Umari turned off',true)},
  hmore:()=>{UI.hLimit=(UI.hLimit||100)+100;render()},
+ af:x=>{UI.af=x.v;UI.hLimit=100;render()},
+ shareAda:async()=>{const f=UI.af||'all',text=adaText(adaRecord().filter(x=>f==='all'||x.t===f));
+  try{if(navigator.share){await navigator.share({title:'Namaz Ada record',text});return}}catch(e){if(e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(text);toast('Copied – paste it in WhatsApp / notes')}catch(e){toast('Could not copy on this phone')}},
  synced:()=>{if(!confirm('Have you updated these changes in the Excel tracker on PC? The list will start fresh (history stays).'))return;snap();log({a:'sync'});S.syncAt=Date.now();save();render();toast('Marked as PC updated',true)},
  shareCh:async()=>{const text=changesText(changes());
   try{if(navigator.share){await navigator.share({title:'Namaz changes for PC',text});return}}catch(e){if(e.name==='AbortError')return}
